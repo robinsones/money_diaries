@@ -20,12 +20,10 @@ library(DT)
 data_with_monthly_expenses <- readRDS("data/2022-11-06-full-data")
 ```
 
-### Chart A
-
 ```{r include = FALSE}
 pretty_data <- data_with_monthly_expenses %>%
   mutate(title = paste0("<a href='",url,"'>",title,"</a>"),
-         location = str_remove(location, ", $")) %>% 
+         location = str_remove(location, ", $")) %>%
   select(-lowercase_title, -hourly, -monthly, -joint, -monthly_expenses, -url) 
 
 colnames(pretty_data) <- str_to_title(colnames(pretty_data))
@@ -40,10 +38,8 @@ datatable(pretty_data,
                          autoWidth = TRUE,
                          server = FALSE,  
                          # defines position of elements on the table
-                         dom = 'Bfrtip',
+                         dom = 'frtipB',
                          buttons = c('csv', 'excel')
-                         #, columnDefs = list(list(targets = '_all', className = 'dt-center'),
-                                           #list(targets = c(0, 8, 9), visible = FALSE))
           ),
           extensions = 'Buttons',
           selection = 'single', 

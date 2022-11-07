@@ -1,0 +1,36 @@
+---
+title: "Exploratory Money Diaries"
+output: html_document
+date: "2022-11-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+money_data <- read_rds("data/2022-11-06-full-data")
+```
+
+```{r}
+ggplot(money_data, aes(x = salary)) + 
+  geom_histogram()
+
+money_data %>%
+  filter(salary == max(money_data$salary, na.rm = TRUE)) %>%
+  pull(salary)
+
+sum(is.na(money_data$salary)) / nrow(money_data)
+```
+
+```{r}
+money_data %>%
+  filter(!hourly, !monthly) %>%
+  ggplot(aes(x = salary)) + 
+  geom_histogram() + 
+  scale_x_log10(labels = scales::dollar) 
+```
+
+
+Analysis ideas: What can we learn from 1,400 money diaries? Average monthly expenses, salaries from different states, % spent on rent or mortgage, net worth 
