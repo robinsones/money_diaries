@@ -1,0 +1,57 @@
+---
+title: "Refinery29 Money Diaries"
+output: 
+  flexdashboard::flex_dashboard:
+    #css: custom.scss
+    theme: 
+      version: 4
+      primary: "#01364C"
+      navbar-bg: "#F7F8F9"
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(DT)
+# Install thematic and un-comment for themed static plots (i.e., ggplot2)
+# thematic::thematic_rmd()
+data_with_monthly_expenses <- readRDS("data/2022-11-06-full-data")
+```
+
+### Chart A
+
+```{r include = FALSE}
+pretty_data <- data_with_monthly_expenses %>%
+  mutate(title = paste0("<a href='",url,"'>",title,"</a>"),
+         location = str_remove(location, ", $")) %>% 
+  select(-lowercase_title, -hourly, -monthly, -joint, -monthly_expenses, -url) 
+
+colnames(pretty_data) <- str_to_title(colnames(pretty_data))
+```
+
+```{r}
+datatable(pretty_data,
+          options = list(paging = TRUE,    
+                         pageLength = 20, 
+                         scrollX = TRUE,   
+                         scrollY = TRUE,  
+                         autoWidth = TRUE,
+                         server = FALSE,  
+                         # defines position of elements on the table
+                         dom = 'Bfrtip',
+                         buttons = c('csv', 'excel')
+                         #, columnDefs = list(list(targets = '_all', className = 'dt-center'),
+                                           #list(targets = c(0, 8, 9), visible = FALSE))
+          ),
+          extensions = 'Buttons',
+          selection = 'single', 
+          filter = 'top',           
+          rownames = FALSE,
+          escape = FALSE
+) %>%
+  formatPercentage(c("% of Income to Housing" = "Housing_share")) %>%
+  formatCurrency(c("Salary", "Monthly Rent/Mortgage" = "Rent_mortgage"), digits = 0)
+```
+
