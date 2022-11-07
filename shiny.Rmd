@@ -2,7 +2,6 @@
 title: "Refinery29 Money Diaries"
 output: 
   flexdashboard::flex_dashboard:
-    #css: custom.scss
     theme: 
       version: 4
       primary: "#01364C"
@@ -30,7 +29,9 @@ colnames(pretty_data) <- str_to_title(colnames(pretty_data))
 ```
 
 ```{r}
-datatable(pretty_data,
+datatable(pretty_data %>%
+            rename("% of Income to Housing" = "Housing_share",
+                   "Monthly Rent/Mortgage" = "Rent_mortgage"),
           options = list(paging = TRUE,    
                          pageLength = 20, 
                          scrollX = TRUE,   
@@ -47,7 +48,7 @@ datatable(pretty_data,
           rownames = FALSE,
           escape = FALSE
 ) %>%
-  formatPercentage(c("% of Income to Housing" = "Housing_share")) %>%
-  formatCurrency(c("Salary", "Monthly Rent/Mortgage" = "Rent_mortgage"), digits = 0)
+  formatPercentage("% of Income to Housing") %>%
+  formatCurrency(c("Salary", "Monthly Rent/Mortgage"), digits = 0)
 ```
 
