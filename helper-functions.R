@@ -120,8 +120,7 @@ get_age <- function(article_text) {
   age_text <- grep('Age:', article_text, value = TRUE)
   
   age_text %>%
-    str_extract("Age: ?\\d{1,2}") %>%
-    str_extract("\\d{1,2}") %>%
+    str_extract("(?<=Age: ?)(\\d+)") %>%
     as.numeric()
 }
 
