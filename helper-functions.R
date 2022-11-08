@@ -1,22 +1,55 @@
 get_article_info <- function(page_number){
   Sys.sleep(1)
   link <- paste0("https://www.refinery29.com/en-us/money-diary?page=", page_number)
-  html <- link %>% 
-    read_html() 
-  title <- html %>%
-    html_nodes(".title") %>%
-    html_text()  %>%
-    unlist()
-  article_urls <- html %>%
-    html_nodes(".card") %>%
-    html_children() %>%
-    html_attrs() %>%
-    str_remove("href") %>%
-    unlist()
-  url <- str_c("https://www.refinery29.com", article_urls)
-  tibble(url) %>%
-    bind_cols(tibble(title) %>%
-                filter(!title %in% c("All Money Diaries", "The Secret Sauce To A Successful Budget")))
+  if (page_number == 1) {
+    html <- link %>% 
+      read_html() 
+    
+    title <- html %>%
+      html_nodes(".title span") %>%
+      html_text()  %>%
+      unlist()
+    
+    regular_article_urls <- html %>%
+      html_nodes(".card") %>%
+      html_children() %>%
+      html_attrs() %>%
+      str_remove("href") %>%
+      unlist()
+    
+    article_url_hero <- html %>%
+      html_nodes(".hero-card-full-width") %>%
+      html_children() %>%
+      html_attrs() %>%
+      str_remove("href") %>%
+      unlist()
+    
+    article_urls <- c(article_url_hero, regular_article_urls)
+    
+    url <- str_c("https://www.refinery29.com", article_urls)
+    tibble(url) %>%
+      bind_cols(tibble(title) %>%
+                  filter(!title %in% c("All Money Diaries", "The Secret Sauce To A Successful Budget")))
+  }
+  
+  else {
+    html <- link %>% 
+      read_html() 
+    title <- html %>%
+      html_nodes(".title") %>%
+      html_text()  %>%
+      unlist()
+    article_urls <- html %>%
+      html_nodes(".card") %>%
+      html_children() %>%
+      html_attrs() %>%
+      str_remove("href") %>%
+      unlist()
+    url <- str_c("https://www.refinery29.com", article_urls)
+    tibble(url) %>%
+      bind_cols(tibble(title) %>%
+                  filter(!title %in% c("All Money Diaries", "The Secret Sauce To A Successful Budget")))
+  }
 }
 
 extract_salary <- function(title) {
@@ -65,12 +98,14 @@ extract_state <- function(location) {
   }
 }
 
-get_monthly_expenses <- function(url) {
-  article_text <- url %>%
+get_article_text <- function(url) { 
+  url %>%
     read_html() %>%
     html_nodes(".section-text") %>%
     html_text()
-  
+}
+
+get_monthly_expenses <- function(article_text) {
   monthly_expenses <- grep('Monthly Expenses', article_text, value = TRUE)
   
   monthly_expenses %>%
@@ -79,6 +114,15 @@ get_monthly_expenses <- function(url) {
     # str_extract_all("\\w+: \\$\\d+") %>% 
     str_extract_all("[^.():\\d]*?: \\$\\d+") %>%
     unlist() 
+}
+
+get_age <- function(article_text) { 
+  age_text <- grep('Age:', article_text, value = TRUE)
+  
+  age_text %>%
+    str_extract("Age: ?\\d{1,2}") %>%
+    str_extract("\\d{1,2}") %>%
+    as.numeric()
 }
 
 get_mortgage_rent <- function(df) {

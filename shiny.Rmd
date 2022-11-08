@@ -16,14 +16,14 @@ library(tidyverse)
 library(DT)
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
 # thematic::thematic_rmd()
-data_with_monthly_expenses <- readRDS("data/2022-11-06-full-data")
+data_with_monthly_expenses <- readRDS("data/2022-11-07-full-data")
 ```
 
 ```{r include = FALSE}
 pretty_data <- data_with_monthly_expenses %>%
   mutate(title = paste0("<a href='",url,"'>",title,"</a>"),
          location = str_remove(location, ", $")) %>%
-  select(-lowercase_title, -hourly, -monthly, -joint, -monthly_expenses, -url) 
+  select(-lowercase_title, -hourly, -monthly, -joint, -monthly_expenses, -url, -article_text) 
 
 colnames(pretty_data) <- str_to_title(colnames(pretty_data))
 ```

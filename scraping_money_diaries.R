@@ -30,11 +30,17 @@ money_data <- article_title_url %>%
          city = str_extract(location, "^[^,]+")) %>%
   filter(str_detect(lowercase_title, "week"))
 
+all_article_text <- money_data %>% 
+  mutate(article_text = map(url, get_article_text)) 
 
-
-all_monthly_expenses <- money_data %>% 
-  mutate(monthly_expenses = map(url, get_monthly_expenses)) 
-
+all_monthly_expenses <- all_article_text %>% 
+  mutate(monthly_expenses = map(article_text, get_monthly_expenses)) %>%
+  filter(!str_detect(lowercase_title, "couple's|couples|5 money diaries")) %>%
+  filter(!str_detect(url, "comparison")) %>%
+  # two diaries don't have age
+  mutate(age = map(article_text, get_age)) %>%
+  mutate(age = map(age, ~ ifelse(is_empty(.x), NA, .x))) %>%
+  mutate(age = as.numeric(age))
 
 non_null_expenses <- all_monthly_expenses %>%
   filter(!map_lgl(monthly_expenses, is.null))
@@ -55,4 +61,4 @@ share_for_housing <- non_null_expenses %>%
                                    hourly == TRUE ~ rent_mortgage / (salary * 40 * 4),
                                    TRUE ~ (rent_mortgage * 12) / salary)) 
 
-write_rds(share_for_housing, file = paste0("data/", today(), "-full-data"))
+write_rds(share_for_housing , file = paste0("data/", today(), "-full-data"))
