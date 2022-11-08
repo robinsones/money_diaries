@@ -40,7 +40,9 @@ all_monthly_expenses <- all_article_text %>%
   # two diaries don't have age
   mutate(age = map(article_text, get_age)) %>%
   mutate(age = map(age, ~ ifelse(is_empty(.x), NA, .x))) %>%
-  mutate(age = as.numeric(age))
+  mutate(age = as.numeric(age)) %>%
+  mutate(total_weekly_spend = map_dbl(article_text, get_weekly_spend)) %>%
+  mutate(total_weekly_spend = na_if(total_weekly_spend, 0))
 
 non_null_expenses <- all_monthly_expenses %>%
   filter(!map_lgl(monthly_expenses, is.null))
@@ -61,4 +63,4 @@ share_for_housing <- non_null_expenses %>%
                                    hourly == TRUE ~ rent_mortgage / (salary * 40 * 4),
                                    TRUE ~ (rent_mortgage * 12) / salary)) 
 
-write_rds(share_for_housing , file = paste0("data/", today(), "-full-data"))
+write_rds(share_for_housing, file = paste0("data/", today(), "-full-data"))

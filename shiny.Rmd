@@ -31,7 +31,8 @@ colnames(pretty_data) <- str_to_title(colnames(pretty_data))
 ```{r}
 datatable(pretty_data %>%
             rename("% of Income to Housing" = "Housing_share",
-                   "Monthly Rent/Mortgage" = "Rent_mortgage"),
+                   "Monthly Rent/Mortgage" = "Rent_mortgage",
+                   "Total Weekly Spend" = "Total_weekly_spend"),
           options = list(paging = TRUE,    
                          pageLength = 20, 
                          scrollX = TRUE,   
@@ -49,6 +50,6 @@ datatable(pretty_data %>%
           escape = FALSE
 ) %>%
   formatPercentage("% of Income to Housing") %>%
-  formatCurrency(c("Salary", "Monthly Rent/Mortgage"), digits = 0)
+  formatCurrency(c("Salary", "Monthly Rent/Mortgage", "Total Weekly Spend"), digits = 0)
 ```
 

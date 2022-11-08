@@ -124,6 +124,17 @@ get_age <- function(article_text) {
     as.numeric()
 }
 
+get_weekly_spend <- function(article_text) {
+  total_spend <- grep('Daily Total:', article_text, value = TRUE)
+  
+  total_spend %>%
+    str_extract_all("(?<=Daily Total: ?\\$)\\d+\\,?(\\d+)?\\.?(\\d+)?") %>%
+    unlist() %>%
+    str_remove(",") %>%
+    as.numeric() %>%
+    sum()
+}
+
 get_mortgage_rent <- function(df) {
   df %>%
     filter(str_detect(Type, "Rent|Mortgage"), !str_detect(Type, regex("insurance", ignore_case = TRUE))) %>%
