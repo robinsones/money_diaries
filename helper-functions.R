@@ -124,7 +124,6 @@ get_age <- function(article_text) {
     as.numeric()
   
   ifelse(length(age) == 0, NA, age)
-  
 }
 
 get_occupation <- function(article_text) { 
@@ -132,10 +131,10 @@ get_occupation <- function(article_text) {
   
   occupation <- occupation_text %>%
     str_extract("(?<=Occupation: )([\\w\\s\\-]+)") %>%
-    str_remove("Industry")
+    str_remove("Industry") %>%
+    str_remove("Age$")
   
   ifelse(length(occupation) == 0, NA, occupation)
-  
 }
 
 get_industry <- function(article_text) { 
