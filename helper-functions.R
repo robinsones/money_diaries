@@ -119,25 +119,48 @@ get_monthly_expenses <- function(article_text) {
 get_age <- function(article_text) { 
   age_text <- grep('Age:', article_text, value = TRUE)
   
-  age_text %>%
+  age <- age_text %>%
     str_extract("(?<=Age: ?)(\\d+)") %>%
     as.numeric()
+  
+  if (length(age) == 0) {
+    NA
+  }
+  else {
+    age
+  }
+  
 }
 
 get_occupation <- function(article_text) { 
   occupation_text <- grep('Occupation:', article_text, value = TRUE)
   
-  occupation_text %>%
+  occupation <- occupation_text %>%
     str_extract("(?<=Occupation: )([\\w\\s\\-]+)") %>%
     str_remove("Industry")
+  
+  if (length(occupation) == 0) {
+    NA
+  }
+  else {
+    occupation
+  }
+  
 }
 
 get_industry <- function(article_text) { 
   industry_text <- grep('Industry:', article_text, value = TRUE)
   
-  industry_text %>%
+  industry <- industry_text %>%
     str_extract("(?<=Industry: )([\\w\\-\\s]+)") %>%
     str_remove("Age")
+  
+  if (length(industry) == 0) {
+    NA
+  }
+  else {
+    industry
+  }
 }
 
 get_weekly_spend <- function(article_text) {

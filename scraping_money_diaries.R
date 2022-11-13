@@ -45,16 +45,9 @@ all_monthly_expenses <- all_article_text %>%
   mutate(monthly_expenses = map(article_text, get_monthly_expenses)) %>%
   filter(!str_detect(lowercase_title, "couple's|couples|5 money diaries")) %>%
   filter(!str_detect(url, "comparison")) %>%
-  # two diaries don't have age
-  mutate(age = map(article_text, get_age)) %>%
-  mutate(age = map(age, ~ ifelse(is_empty(.x), NA, .x))) %>%
-  mutate(age = as.numeric(age)) %>%
-  mutate(occupation = map(article_text, get_occupation),
-         industry = map(article_text, get_industry)) %>%
-  mutate(occupation = map(occupation, ~ ifelse(is_empty(.x), NA, .x)),
-         industry = map(industry, ~ ifelse(is_empty(.x), NA, .x))) %>%
-  mutate(occupation = as.character(occupation),
-         industry = as.character(industry)) %>%
+  mutate(age = map_dbl(article_text, get_age)) %>%
+  mutate(occupation = map_chr(article_text, get_occupation),
+         industry = map_chr(article_text, get_industry)) %>%
   mutate(total_weekly_spend = map_dbl(article_text, get_weekly_spend)) %>%
   mutate(total_weekly_spend = na_if(total_weekly_spend, 0))
 
