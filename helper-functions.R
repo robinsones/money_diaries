@@ -123,12 +123,7 @@ get_age <- function(article_text) {
     str_extract("(?<=Age: ?)(\\d+)") %>%
     as.numeric()
   
-  if (length(age) == 0) {
-    NA
-  }
-  else {
-    age
-  }
+  ifelse(length(age) == 0, NA, age)
   
 }
 
@@ -139,12 +134,7 @@ get_occupation <- function(article_text) {
     str_extract("(?<=Occupation: )([\\w\\s\\-]+)") %>%
     str_remove("Industry")
   
-  if (length(occupation) == 0) {
-    NA
-  }
-  else {
-    occupation
-  }
+  ifelse(length(occupation) == 0, NA, occupation)
   
 }
 
@@ -155,12 +145,7 @@ get_industry <- function(article_text) {
     str_extract("(?<=Industry: )([\\w\\-\\s]+)") %>%
     str_remove("Age")
   
-  if (length(industry) == 0) {
-    NA
-  }
-  else {
-    industry
-  }
+  ifelse(length(industry) == 0, NA, industry)
 }
 
 get_weekly_spend <- function(article_text) {
