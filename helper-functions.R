@@ -124,6 +124,22 @@ get_age <- function(article_text) {
     as.numeric()
 }
 
+get_occupation <- function(article_text) { 
+  occupation_text <- grep('Occupation:', article_text, value = TRUE)
+  
+  occupation_text %>%
+    str_extract("(?<=Occupation: )([\\w\\s\\-]+)") %>%
+    str_remove("Industry")
+}
+
+get_industry <- function(article_text) { 
+  industry_text <- grep('Industry:', article_text, value = TRUE)
+  
+  industry_text %>%
+    str_extract("(?<=Industry: )([\\w\\-\\s]+)") %>%
+    str_remove("Age")
+}
+
 get_weekly_spend <- function(article_text) {
   total_spend <- grep('Daily Total:', article_text, value = TRUE)
   

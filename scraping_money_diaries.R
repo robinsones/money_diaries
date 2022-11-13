@@ -7,7 +7,7 @@ source("helper-functions.R")
 
 robotstxt::get_robotstxt("https://www.refinery29.com")
 
-nb_of_pages <- 53
+nb_of_pages <- 54
 
 article_title_url <- purrr::map_df(1:nb_of_pages, get_article_info) 
 
@@ -30,8 +30,16 @@ money_data <- article_title_url %>%
          city = str_extract(location, "^[^,]+")) %>%
   filter(str_detect(lowercase_title, "week"))
 
-all_article_text <- money_data %>% 
+all_article_text_first <- money_data %>% 
+  slice(1:750) %>%
   mutate(article_text = map(url, get_article_text)) 
+
+all_article_text_second <- money_data %>% 
+  slice(751:n()) %>%
+  mutate(article_text = map(url, get_article_text)) 
+
+all_article_text <- all_article_text_first %>%
+  bind_rows(all_article_text_second)
 
 all_monthly_expenses <- all_article_text %>% 
   mutate(monthly_expenses = map(article_text, get_monthly_expenses)) %>%
@@ -41,6 +49,12 @@ all_monthly_expenses <- all_article_text %>%
   mutate(age = map(article_text, get_age)) %>%
   mutate(age = map(age, ~ ifelse(is_empty(.x), NA, .x))) %>%
   mutate(age = as.numeric(age)) %>%
+  mutate(occupation = map(article_text, get_occupation),
+         industry = map(article_text, get_industry)) %>%
+  mutate(occupation = map(occupation, ~ ifelse(is_empty(.x), NA, .x)),
+         industry = map(industry, ~ ifelse(is_empty(.x), NA, .x))) %>%
+  mutate(occupation = as.character(occupation),
+         industry = as.character(industry)) %>%
   mutate(total_weekly_spend = map_dbl(article_text, get_weekly_spend)) %>%
   mutate(total_weekly_spend = na_if(total_weekly_spend, 0))
 
