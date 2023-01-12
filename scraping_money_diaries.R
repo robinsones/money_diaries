@@ -7,7 +7,7 @@ source("helper-functions.R")
 
 robotstxt::get_robotstxt("https://www.refinery29.com")
 
-nb_of_pages <- 54
+nb_of_pages <- 58
 
 article_title_url <- purrr::map_df(1:nb_of_pages, get_article_info) 
 
@@ -71,3 +71,4 @@ share_for_housing <- non_null_expenses %>%
                                    TRUE ~ (rent_mortgage * 12) / salary)) 
 
 write_rds(share_for_housing, file = paste0("data/", today(), "-full-data"))
+

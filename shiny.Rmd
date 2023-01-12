@@ -16,7 +16,7 @@ library(tidyverse)
 library(DT)
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
 # thematic::thematic_rmd()
-data_with_monthly_expenses <- readRDS("data/2022-11-13-full-data")
+data_with_monthly_expenses <- readRDS("data/2023-01-12-full-data")
 ```
 
 ```{r include = FALSE}
