@@ -16,7 +16,7 @@ library(tidyverse)
 library(DT)
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
 # thematic::thematic_rmd()
-data_with_monthly_expenses <- readRDS("data/2023-01-12-full-data")
+data_with_monthly_expenses <- readRDS("data/2025-07-29-full-data")
 ```
 
 ```{r include = FALSE}
@@ -28,7 +28,7 @@ pretty_data <- data_with_monthly_expenses %>%
 colnames(pretty_data) <- str_to_title(colnames(pretty_data))
 ```
 
-```{r}
+```{r echo = FALSE}
 datatable(pretty_data %>%
             rename("% of Income to Housing" = "Housing_share",
                    "Monthly Rent/Mortgage" = "Rent_mortgage",
