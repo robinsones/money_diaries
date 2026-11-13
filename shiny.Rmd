@@ -16,7 +16,9 @@ library(tidyverse)
 library(DT)
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
 # thematic::thematic_rmd()
-data_with_monthly_expenses <- readRDS("data/2025-07-29-full-data")
+# use the most recent dataset written by update_money_diaries.R
+latest_data <- sort(list.files("data", pattern = "^\\d{4}-\\d{2}-\\d{2}-full-data$", full.names = TRUE)) %>% last()
+data_with_monthly_expenses <- readRDS(latest_data)
 ```
 
 ```{r include = FALSE}

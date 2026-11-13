@@ -108,8 +108,13 @@ get_article_text <- function(url) {
 get_monthly_expenses <- function(article_text) {
   monthly_expenses <- grep('Monthly Expenses', article_text, value = TRUE)
   
+  # Since ~2023 the whole intro (salary, assets, debt, expenses) is one block of
+  # text, so only keep what comes after the "Monthly Expenses" header. Otherwise
+  # e.g. a mortgage balance listed under Debt gets picked up as the monthly payment.
   monthly_expenses %>%
+    str_extract(regex("Monthly Expenses.*", dotall = TRUE)) %>%
     str_remove_all(",") %>%
+    str_remove_all("Monthly Expenses") %>%
     str_remove_all("Expenses") %>%
     # str_extract_all("\\w+: \\$\\d+") %>% 
     str_extract_all("[^.():\\d]*?: \\$\\d+") %>%
@@ -162,4 +167,82 @@ get_mortgage_rent <- function(df) {
   df %>%
     filter(str_detect(Type, "Rent|Mortgage"), !str_detect(Type, regex("insurance", ignore_case = TRUE))) %>%
     pull(Amount)
+}
+
+# Since ~2023 diaries have a single "Housing Costs:" line instead of separate
+# Rent / Mortgage lines, and it is often a sentence ("I pay $1,325 in rent...")
+# rather than a plain amount. Take the first dollar amount on that line.
+get_housing_costs <- function(article_text) {
+  housing_text <- article_text %>%
+    str_extract(regex("Housing Costs?:.{0,300}", ignore_case = TRUE, dotall = TRUE)) %>%
+    discard(is.na)
+  
+  if (length(housing_text) == 0) {
+    return(NA_real_)
+  }
+  
+  housing_text[1] %>%
+    # stop at the next line of the template so we don't pick up a loan payment
+    str_remove(regex("Loan Payments?:.*", ignore_case = TRUE, dotall = TRUE)) %>%
+    str_remove_all(",") %>%
+    # skip totals like "$1.4 million" (remaining mortgage, home value)
+    str_extract("\\$(?>\\d+(?:\\.\\d+)?)(?! ?(million|k\\b))") %>%
+    str_remove("\\$") %>%
+    as.numeric()
+}
+
+# Same parsing as scraping_money_diaries.R, applied to a tibble of url + title.
+# Every step is row-wise, so running it on only the new rows gives the same result
+# as re-running it on everything.
+parse_titles <- function(article_title_url) {
+  article_title_url %>%
+    mutate(lowercase_title = str_to_lower(title)) %>%
+    mutate(
+      salary = map_dbl(title, extract_salary),
+      location = str_remove(title, "A Week In ") %>%
+        str_remove("On .*"),
+      joint = str_detect(lowercase_title, "joint"),
+      hourly = str_detect(lowercase_title, "hour"),
+      monthly = str_detect(lowercase_title, "month")
+    ) %>%
+    mutate(
+      state = map_chr(location, extract_state),
+      city = str_extract(location, "^[^,]+")
+    ) %>%
+    filter(str_detect(lowercase_title, "week"))
+}
+
+parse_articles <- function(articles) {
+  articles %>%
+    mutate(monthly_expenses = map(article_text, get_monthly_expenses)) %>%
+    filter(!str_detect(lowercase_title, "couple's|couples|5 money diaries")) %>%
+    filter(!str_detect(url, "comparison")) %>%
+    mutate(
+      age = map_dbl(article_text, get_age),
+      occupation = map_chr(article_text, get_occupation),
+      industry = map_chr(article_text, get_industry),
+      total_weekly_spend = map_dbl(article_text, get_weekly_spend) %>% na_if(0)
+    ) %>%
+    # keep_empty: newer diaries can have a housing cost without itemised expenses
+    unnest(monthly_expenses, keep_empty = TRUE) %>%
+    separate(monthly_expenses, into = c("Type", "Amount"), sep = ":") %>%
+    mutate(Amount = str_remove(Amount, ",") %>% str_extract("\\d+")) %>%
+    nest(monthly_expenses = c(Type, Amount)) %>%
+    mutate(
+      housing_costs = map_dbl(article_text, get_housing_costs),
+      rent_mortgage = map(monthly_expenses, get_mortgage_rent)
+    ) %>%
+    # prefer the "Housing Costs" line; fall back to a single Rent / Mortgage line
+    filter(!is.na(housing_costs) | map_int(rent_mortgage, length) == 1) %>%
+    mutate(
+      rent_mortgage = map2_dbl(housing_costs, rent_mortgage, ~ if (!is.na(.x)) .x else as.numeric(.y))
+    ) %>%
+    select(-housing_costs) %>%
+    mutate(
+      housing_share = case_when(
+        monthly ~ rent_mortgage / salary,
+        hourly ~ rent_mortgage / (salary * 40 * 4),
+        TRUE ~ (rent_mortgage * 12) / salary
+      )
+    )
 }
