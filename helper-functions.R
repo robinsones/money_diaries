@@ -84,18 +84,165 @@ extract_salary <- function(title) {
   
 }
 
+# ---- State extraction ---------------------------------------------------------
+
+us_states <- c(setNames(state.abb, state.name), "District of Columbia" = "DC")
+
+canadian_provinces <- c(
+  "British Columbia" = "BC", "Alberta" = "AB", "Saskatchewan" = "SK",
+  "Manitoba" = "MB", "Ontario" = "ON", "Quebec" = "QC", "Nova Scotia" = "NS",
+  "New Brunswick" = "NB", "Newfoundland" = "NL", "Prince Edward Island" = "PE"
+)
+
+# Educated guesses for titles that only name a city or region ("A Week In Seattle").
+# Names are regular expressions matched on word boundaries; first match wins.
+place_to_state <- c(
+  # New York
+  "New York|NYC|Brooklyn|Manhattan|Queens|The Bronx|Staten Island|Long Island|Harlem" = "NY",
+  # California
+  "Los Angeles|L\\.A\\.|LA|San Francisco|Bay Area|Silicon Valley|San Diego|San Jose|Oakland|Sacramento|Orange County" = "CA",
+  "Boston|Cambridge" = "MA",
+  "Chicago" = "IL",
+  "Philadelphia|Philly|Pittsburgh" = "PA",
+  "Seattle" = "WA",
+  "Denver|Rocky Mountains" = "CO",
+  "Dallas|Houston|Austin|San Antonio|Fort Worth" = "TX",
+  "Atlanta" = "GA",
+  "Miami|Orlando|Tampa" = "FL",
+  "Detroit" = "MI",
+  "Minneapolis|St\\.? Paul|Twin Cities" = "MN",
+  "Milwaukee" = "WI",
+  "Cincinnati|Cleveland|Columbus" = "OH",
+  "Indianapolis" = "IN",
+  "Nashville|Memphis" = "TN",
+  "Baltimore" = "MD",
+  "Las Vegas" = "NV",
+  "Salt Lake City" = "UT",
+  "Portland" = "OR",
+  "Phoenix" = "AZ",
+  "New Orleans" = "LA",
+  "Kansas City|St\\.? Louis" = "MO",
+  "Charlotte|Raleigh|Durham" = "NC",
+  # Canada
+  "Toronto|Ottawa|Hamilton" = "ON",
+  "Vancouver" = "BC",
+  "Montreal" = "QC",
+  "Halifax" = "NS",
+  "Saskatoon" = "SK",
+  "Edmonton|Calgary" = "AB",
+  "Canada|The Prairies" = "Canada",
+  # Rest of the world: use the country
+  "London|England|Scotland" = "United Kingdom",
+  "Paris" = "France",
+  "Berlin" = "Germany",
+  "Copenhagen" = "Denmark",
+  "Amsterdam|The Netherlands" = "Netherlands",
+  "Brussels|Belgium" = "Belgium",
+  "Vienna" = "Austria",
+  "Jerusalem" = "Israel",
+  "Shanghai" = "China",
+  "Mexico City" = "Mexico",
+  "Singapore" = "Singapore",
+  "Hong Kong" = "Hong Kong",
+  "Bahrain" = "Bahrain",
+  "Luxembourg" = "Luxembourg",
+  "Morocco" = "Morocco",
+  "Ecuador" = "Ecuador",
+  "South Korea" = "South Korea",
+  "Australia" = "Australia"
+)
+
+# Pulls the place out of a title. Most are "A Week In <place> On A $<income>", but
+# some put the place elsewhere ("A Week On Unemployment In Portland, Oregon").
+extract_location <- function(title) {
+  if (str_detect(title, "^A Week In ")) {
+    location <- title %>%
+      str_remove("^A Week In ") %>%
+      str_remove("On .*")
+  } else {
+    location <- str_remove(title, ",? On (A |An )?(Joint )?\\$.*")
+    if (str_detect(location, " [Ii]n ")) {
+      # "A Week As A Student In Los Angeles" -> "Los Angeles"
+      location <- str_extract(location, "(?<= [Ii]n )(?!.* [Ii]n ).*")
+    } else {
+      # "A Week On Long Island" -> "Long Island"
+      location <- str_remove(location, "^A Week (On|Near) ")
+    }
+  }
+  
+  location <- location %>%
+    # "New York As An Intern" -> "New York"
+    str_remove(" As An? .*") %>%
+    # "Michigan That Costs $3,500 A Month" -> "Michigan"
+    str_remove(",? That Costs .*") %>%
+    str_squish() %>%
+    str_remove(",$")
+  
+  # no place in the title at all ("A Week As A Nomad")
+  if (str_detect(location, "^(A Week|How Much)")) {
+    return(NA_character_)
+  }
+  location
+}
+
+# Returns a US state / Canadian province abbreviation, a country name for
+# everywhere else, or NA when the title doesn't say (e.g. "The Midwest").
 extract_state <- function(location) {
-  has_state_name <- length(str_which(location, state.name)) == 1
-  if (has_state_name & !str_detect(location, "New York|Washington|Kansas City")) { 
-    state_name <- str_extract(location, paste0(state.name, collapse = "|")) 
-    state.abb[match(state_name, state.name)]
+  if (is.na(location)) {
+    return(NA_character_)
   }
-  else if (str_detect(location, "New York City|NYC")) { 
-    return("NY")
+  
+  location <- location %>%
+    str_squish() %>%
+    str_remove(",$")
+  
+  # "Washington, D.C." in all its spellings
+  if (str_detect(location, "Washington,? D\\.?C|^D\\.?C\\.?$")) {
+    return("DC")
   }
-  else { 
-    str_extract(location, "(?<=, )\\w+")
+  
+  # 1. Whatever follows the last comma: "Dallas, TX", "Durham, N.C.", "Ottawa, Ontario"
+  after_comma <- str_extract(location, "(?<=,)[^,]*$") %>% str_trim()
+  if (!is.na(after_comma)) {
+    abbreviation <- after_comma %>% str_remove_all("\\.") %>% str_extract("^[A-Z]{2}\\b")
+    if (abbreviation %in% c(us_states, canadian_provinces)) {
+      return(abbreviation)
+    }
+    if (after_comma %in% names(c(us_states, canadian_provinces))) {
+      return(unname(c(us_states, canadian_provinces)[after_comma]))
+    }
   }
+  
+  # An abbreviation elsewhere: "Austin TX", "Jersey City, NJ, A $82,500 Salary"
+  other_abbreviation <- str_extract(location, "(?<=, )[A-Z]{2}\\b|\\b[A-Z]{2}$")
+  if (other_abbreviation %in% c(us_states, canadian_provinces)) {
+    return(other_abbreviation)
+  }
+  
+  # 2. A state name anywhere: "Northern Virginia", "Upstate New York". Longest name
+  # first so "West Virginia" beats "Virginia". Skip names that are usually a city.
+  all_names <- c(us_states, canadian_provinces)
+  state_names <- names(all_names)[order(-nchar(names(all_names)))]
+  state_name <- str_extract(location, paste0("\\b(", paste0(state_names, collapse = "|"), ")"))
+  is_city <- str_detect(location, "Kansas City") |
+    (identical(state_name, "Washington") & !str_detect(location, "Washington State"))
+  if (!is.na(state_name) & !is_city) {
+    return(unname(all_names[state_name]))
+  }
+  
+  # 3. Educated guess from a well-known city or region
+  for (pattern in names(place_to_state)) {
+    if (str_detect(location, paste0("\\b(", pattern, ")(?!\\w)"))) {
+      return(unname(place_to_state[pattern]))
+    }
+  }
+  
+  # 4. Otherwise assume "City, Country" (but not a sentence that happens to have a comma)
+  if (!is.na(after_comma) & str_detect(location, "^(?!A Week)[^,]+, [A-Z]\\w+( \\w+){0,2}$")) {
+    return(after_comma)
+  }
+  
+  NA_character_
 }
 
 get_article_text <- function(url) { 
@@ -199,14 +346,19 @@ parse_titles <- function(article_title_url) {
     mutate(lowercase_title = str_to_lower(title)) %>%
     mutate(
       salary = map_dbl(title, extract_salary),
-      location = str_remove(title, "A Week In ") %>%
-        str_remove("On .*"),
+      location = map_chr(title, extract_location),
       joint = str_detect(lowercase_title, "joint"),
       hourly = str_detect(lowercase_title, "hour"),
       monthly = str_detect(lowercase_title, "month")
     ) %>%
     mutate(
       state = map_chr(location, extract_state),
+      # titles like "A Week On Unemployment In Portland, Oregon" leave no usable
+      # location, so fall back to the title with the income part removed
+      state = coalesce(
+        state,
+        map_chr(str_remove(title, " On (A |An )?(Joint )?\\$.*"), extract_state)
+      ),
       city = str_extract(location, "^[^,]+")
     ) %>%
     filter(str_detect(lowercase_title, "week"))
