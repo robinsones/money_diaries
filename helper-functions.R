@@ -152,9 +152,46 @@ place_to_state <- c(
   "Australia" = "Australia"
 )
 
+# Pulls the place out of a title. Most are "A Week In <place> On A $<income>", but
+# some put the place elsewhere ("A Week On Unemployment In Portland, Oregon").
+extract_location <- function(title) {
+  if (str_detect(title, "^A Week In ")) {
+    location <- title %>%
+      str_remove("^A Week In ") %>%
+      str_remove("On .*")
+  } else {
+    location <- str_remove(title, ",? On (A |An )?(Joint )?\\$.*")
+    if (str_detect(location, " [Ii]n ")) {
+      # "A Week As A Student In Los Angeles" -> "Los Angeles"
+      location <- str_extract(location, "(?<= [Ii]n )(?!.* [Ii]n ).*")
+    } else {
+      # "A Week On Long Island" -> "Long Island"
+      location <- str_remove(location, "^A Week (On|Near) ")
+    }
+  }
+  
+  location <- location %>%
+    # "New York As An Intern" -> "New York"
+    str_remove(" As An? .*") %>%
+    # "Michigan That Costs $3,500 A Month" -> "Michigan"
+    str_remove(",? That Costs .*") %>%
+    str_squish() %>%
+    str_remove(",$")
+  
+  # no place in the title at all ("A Week As A Nomad")
+  if (str_detect(location, "^(A Week|How Much)")) {
+    return(NA_character_)
+  }
+  location
+}
+
 # Returns a US state / Canadian province abbreviation, a country name for
 # everywhere else, or NA when the title doesn't say (e.g. "The Midwest").
 extract_state <- function(location) {
+  if (is.na(location)) {
+    return(NA_character_)
+  }
+  
   location <- location %>%
     str_squish() %>%
     str_remove(",$")
@@ -309,8 +346,7 @@ parse_titles <- function(article_title_url) {
     mutate(lowercase_title = str_to_lower(title)) %>%
     mutate(
       salary = map_dbl(title, extract_salary),
-      location = str_remove(title, "A Week In ") %>%
-        str_remove("On .*"),
+      location = map_chr(title, extract_location),
       joint = str_detect(lowercase_title, "joint"),
       hourly = str_detect(lowercase_title, "hour"),
       monthly = str_detect(lowercase_title, "month")
