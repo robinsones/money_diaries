@@ -44,19 +44,21 @@ for (page in seq_len(max_pages)) {
 
 # ---- 2. Fetch and parse the new diaries --------------------------------------
 
-safe_get_article_text <- function(url) {
+safe_get_article <- function(url) {
   Sys.sleep(1)
-  tryCatch(get_article_text(url), error = function(e) {
+  tryCatch(get_article(url), error = function(e) {
     message("  FAILED: ", url, " (", conditionMessage(e), ")")
     NULL
   })
 }
 
 fetched <- parse_titles(new_index) %>%
-  mutate(article_text = map(url, safe_get_article_text))
+  mutate(article = map(url, safe_get_article))
 
-failed <- fetched %>% filter(map_lgl(article_text, is.null))
-fetched <- fetched %>% filter(!map_lgl(article_text, is.null))
+failed <- fetched %>% filter(map_lgl(article, is.null))
+fetched <- fetched %>%
+  filter(!map_lgl(article, is.null)) %>%
+  unpack_articles()
 new_diaries <- parse_articles(fetched) %>% select(all_of(diary_columns))
 unparsed <- fetched %>% filter(!url %in% new_diaries$url)
 

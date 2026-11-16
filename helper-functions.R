@@ -252,6 +252,37 @@ get_article_text <- function(url) {
     html_text()
 }
 
+# The publish date is in the page's structured data (JSON-LD), e.g.
+# "datePublished":"2026-11-04T12:00:32.000Z"
+get_date_published <- function(html) {
+  html %>%
+    html_nodes("script[type='application/ld+json']") %>%
+    html_text() %>%
+    str_extract('(?<="datePublished":")\\d{4}-\\d{2}-\\d{2}') %>%
+    discard(is.na) %>%
+    first() %>%
+    as.Date()
+}
+
+# Fetches an article once and returns everything we parse from it
+get_article <- function(url) {
+  html <- read_html(url)
+  list(
+    article_text = html %>% html_nodes(".section-text") %>% html_text(),
+    date_published = get_date_published(html)
+  )
+}
+
+# Turns a list-column of get_article() results into article_text and date_published
+unpack_articles <- function(df) {
+  df %>%
+    mutate(
+      article_text = map(article, "article_text"),
+      date_published = as.Date(map_chr(article, ~ as.character(.x$date_published)))
+    ) %>%
+    select(-article)
+}
+
 get_monthly_expenses <- function(article_text) {
   monthly_expenses <- grep('Monthly Expenses', article_text, value = TRUE)
   
@@ -408,7 +439,8 @@ parse_articles <- function(articles) {
 # Columns kept in data/diaries.csv. Article text is deliberately not stored.
 diary_columns <- c(
   "url", "title", "salary", "location", "state", "city", "joint", "hourly", "monthly",
-  "age", "occupation", "industry", "total_weekly_spend", "rent_mortgage", "housing_share"
+  "age", "occupation", "industry", "total_weekly_spend", "rent_mortgage", "housing_share",
+  "date_published"
 )
 
 read_diaries <- function(path = "data/diaries.csv") {
@@ -418,6 +450,7 @@ read_diaries <- function(path = "data/diaries.csv") {
       url = "c", title = "c", location = "c", state = "c", city = "c",
       occupation = "c", industry = "c",
       joint = "l", hourly = "l", monthly = "l",
+      date_published = "D",
       .default = "d"
     )
   )
