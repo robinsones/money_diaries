@@ -1,0 +1,16 @@
+.Rproj.user
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+
+# data: only the two CSVs are tracked; dated snapshots and raw article text stay local
+data/*
+!data/index.csv
+!data/diaries.csv
+
+# rendered output and local publishing config
+*.html
+_site/
+rsconnect/
+health-report.md
