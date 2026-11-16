@@ -16,16 +16,15 @@ library(tidyverse)
 library(DT)
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
 # thematic::thematic_rmd()
-# use the most recent dataset written by update_money_diaries.R
-latest_data <- sort(list.files("data", pattern = "^\\d{4}-\\d{2}-\\d{2}-full-data$", full.names = TRUE)) %>% last()
-data_with_monthly_expenses <- readRDS(latest_data)
+source("helper-functions.R")
+diaries <- read_diaries("data/diaries.csv")
 ```
 
 ```{r include = FALSE}
-pretty_data <- data_with_monthly_expenses %>%
-  mutate(title = paste0("<a href='",url,"'>",title,"</a>"),
-         location = str_remove(location, ", $")) %>%
-  select(-lowercase_title, -hourly, -monthly, -joint, -monthly_expenses, -url, -article_text) 
+pretty_data <- diaries %>%
+  mutate(title = paste0("<a href='", url, "'>", title, "</a>")) %>%
+  select(title, salary, location, state, city, age, occupation, industry,
+         total_weekly_spend, rent_mortgage, housing_share)
 
 colnames(pretty_data) <- str_to_title(colnames(pretty_data))
 ```

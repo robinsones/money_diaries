@@ -1,0 +1,81 @@
+name: Update money diaries
+
+on:
+  schedule:
+    - cron: "0 13 * * 1" # every Monday, 13:00 UTC
+  workflow_dispatch: # allows a manual run from the Actions tab
+
+permissions:
+  contents: write # commit the updated data
+  pages: write # publish the dashboard
+  id-token: write
+  issues: write # open an issue when parsing breaks
+
+concurrency:
+  group: update-money-diaries
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::rvest
+            any::tidyverse
+            any::rmarkdown
+            any::flexdashboard
+            any::DT
+
+      - name: Scrape and parse new diaries
+        id: update
+        run: Rscript update_money_diaries.R
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/index.csv data/diaries.csv
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+          else
+            git commit -m "Add ${{ steps.update.outputs.new_diaries }} new diaries"
+            git push
+          fi
+
+      - name: Render dashboard
+        run: Rscript -e 'rmarkdown::render("shiny.Rmd", output_file = "index.html", output_dir = "_site")'
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - name: Publish to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5
+
+      # If most recent diaries no longer parse, the site's template has probably
+      # changed. Open an issue (once) and fail the run so it gets noticed.
+      - name: Health check
+        if: steps.update.outputs.healthy == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Recent money diaries are not parsing"
+          if [ -z "$(gh issue list --state open --search "in:title $title" --json number --jq '.[].number')" ]; then
+            gh issue create --title "$title" --body-file health-report.md
+          fi
+          echo "::error::Health check failed: most recent diaries could not be parsed."
+          exit 1

@@ -364,11 +364,15 @@ parse_titles <- function(article_title_url) {
     filter(str_detect(lowercase_title, "week"))
 }
 
+# Round-ups and comparison pieces that sit on the index but aren't single diaries
+is_excluded_diary <- function(lowercase_title, url) {
+  str_detect(lowercase_title, "couple's|couples|5 money diaries") | str_detect(url, "comparison")
+}
+
 parse_articles <- function(articles) {
   articles %>%
     mutate(monthly_expenses = map(article_text, get_monthly_expenses)) %>%
-    filter(!str_detect(lowercase_title, "couple's|couples|5 money diaries")) %>%
-    filter(!str_detect(url, "comparison")) %>%
+    filter(!is_excluded_diary(lowercase_title, url)) %>%
     mutate(
       age = map_dbl(article_text, get_age),
       occupation = map_chr(article_text, get_occupation),
@@ -397,4 +401,24 @@ parse_articles <- function(articles) {
         TRUE ~ (rent_mortgage * 12) / salary
       )
     )
+}
+
+# ---- Stored data ---------------------------------------------------------------
+
+# Columns kept in data/diaries.csv. Article text is deliberately not stored.
+diary_columns <- c(
+  "url", "title", "salary", "location", "state", "city", "joint", "hourly", "monthly",
+  "age", "occupation", "industry", "total_weekly_spend", "rent_mortgage", "housing_share"
+)
+
+read_diaries <- function(path = "data/diaries.csv") {
+  read_csv(
+    path,
+    col_types = cols(
+      url = "c", title = "c", location = "c", state = "c", city = "c",
+      occupation = "c", industry = "c",
+      joint = "l", hourly = "l", monthly = "l",
+      .default = "d"
+    )
+  )
 }
