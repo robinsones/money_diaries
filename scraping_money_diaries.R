@@ -24,10 +24,11 @@ article_title_url <- purrr::map_df(1:nb_of_pages, get_article_info) %>%
   )
 
 all_article_text <- parse_titles(article_title_url) %>%
-  mutate(article_text = map(url, function(url) {
+  mutate(article = map(url, function(url) {
     Sys.sleep(1)
-    get_article_text(url)
-  }))
+    get_article(url)
+  })) %>%
+  unpack_articles()
 
 # keep the raw text locally (not committed) so parsing can be re-run without re-scraping
 saveRDS(all_article_text, paste0("data/", Sys.Date(), "-article-text.rds"))
